@@ -15,7 +15,7 @@ class Network:
 		Cria a Rede Perceptron, de acordo com a estrutura desejada
 		Sendo que no mínimo espera uma estrutura de 3 camadas,
 		sendo 1 camada de entrada, 1 oculta e 1 de saída.
-		A estrutura é lista de inteiros, representando a
+		A estrutura é uma lista de inteiros, contendo a
 		qtde de neurônios de cada camada.
 		Por padrão estou usando a função de ativação Sigmóide,
 		mas as opções disponíveis para funcao_ativacao são:
@@ -56,6 +56,20 @@ class Network:
 		'''
 		return reduce(lambda entradas, camada : camada.outputs(entradas),
 					  self.camadas, entrada)
+
+	def backpropagate(self, esperado):
+		'''(list[float]) -> None
+		Calcula as mudanças em cada neurônio com base nos erros da saída
+		em comparação com a saída esperada
+		'''
+		# calcula delta para os neurônios da camada de saída
+		ultima_camada = len(self.camadas) - 1
+		self.camadas[ultima_camada].calcular_deltas_camada_saida(esperado)
+
+		# calcula delta para as camadas ocultas na ordem inversa
+		for l in range(ultima_camada - 1, 0, -1):
+			self.camadas[l].calcular_deltas_camada_oculta(self.camadas[l + 1])
+
 
 
 
