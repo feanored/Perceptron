@@ -6,13 +6,13 @@ Created on Sat Feb 15 19:32:18 2020
 Número USP: 9318532
 """
 from math import exp, log
+import numpy as np
 from functools import lru_cache
 
 # produto escalar
-@lru_cache(maxsize=None)
 def prod_escalar(X, Y):
 	'''(list, list) -> float'''
-	return sum(x * y for x, y in zip(X, Y))
+	return np.array(X).dot(Y)
 
 
 # função sigmóide, usada para classificação

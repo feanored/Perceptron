@@ -8,6 +8,7 @@ Número USP: 9318532
 from functools import reduce
 from layer import Layer
 from util import s_relu, sigmoide, der_sigmoide
+from scores import Score
 
 class Network:
 	def __init__(self, estrutura, taxa_aprendizado, funcao_ativacao=""):
@@ -35,6 +36,9 @@ class Network:
 
 		# camadas
 		self.camadas = []
+
+		# lista de previsoes
+		self.previsoes = []
 
 		# camada de entrada
 		entrada = Layer(None, estrutura[0], taxa_aprendizado,
@@ -70,12 +74,34 @@ class Network:
 		for l in range(ultima_camada - 1, 0, -1):
 			self.camadas[l].calcular_deltas_camada_oculta(self.camadas[l + 1])
 
+		# atualiza os pesos dos neurônios
+		for camada in self.camadas[1:]: # ignora camada de entrada
+			for neuronio in camada.neuronios:
+				for w in range(len(neuronio.pesos)):
+					neuronio.pesos[w] += (neuronio.taxa_aprendizado *
+								      camada.camada_anterior.output_cache[w] *
+									  neuronio.delta)
 
 
+	def train(self, entradas, esperados):
+		'''(list[list[floats]], list[list[floats]]) -> None
+		Faz o treino da rede perceptron, passando a lista de amostras
+		e seus valores esperados para a função backpropagate
+		poder atualizar os pesos (isto configura 1 iteração do treino)
+		'''
+		for i, x in enumerate(entradas):
+			y = esperados[i]
+			y_pred = self.outputs(x)
+			print(y_pred)
+			self.backpropagate(y)
 
 
-
-
+	def predict(self, entradas, esperados, interpretar):
+		'''(list[list[floats]], list[list[floats]], Callable) -> None
+		Faz a validação da Rede, mostrando a matriz de confusão ao final
+		'''
+		for entrada in entradas:
+			self.previsoes.append(interpretar(self.outputs(entrada)))
 
 
 

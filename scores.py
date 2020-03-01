@@ -11,6 +11,11 @@ import matplotlib.pyplot as plt
 
 class Scores():
     def __init__(self, x=[], y=[]):
+        '''(list, list) -> None
+        Recebe uma lista de valores esperados (reais)
+        e uma lista de valores previstos, e calcula
+        a matriz de confusão e medidas de precisão
+        '''
         if len(x)*len(y) > 0 and len(x) == len(y):
             self.x = x
             self.y = y
