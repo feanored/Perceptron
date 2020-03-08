@@ -6,6 +6,7 @@ Created on Tue Feb 25 18:37:12 2020
 Número USP: 9318532
 """
 from network import Network
+from scores import Scores
 
 class Perceptron(Network):
 	def __init__(self, camada_oculta, taxa_aprendizado=0.1):
@@ -24,5 +25,5 @@ class Perceptron(Network):
 
 	def medir_pontuacao(self, esperados):
 
-		score = Score(esperados, y_pred)
+		score = Scores(esperados, y_pred)
 		score.exibir_grafico()
