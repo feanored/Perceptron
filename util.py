@@ -1,47 +1,56 @@
 # -*- coding: utf-8 -*-
+# util.py
+# From Classic Computer Science Problems in Python Chapter 7
+# Copyright 2018 David Kopec
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
 """
-Created on Sat Feb 15 19:32:18 2020
-
 @author: Eduardo Galvani Massino
 Número USP: 9318532
 """
 from math import exp, log
-import numpy as np
-from functools import lru_cache
+#from functools import lru_cache
 
-# produto escalar
-def prod_escalar(X, Y):
-    '''(list, list) -> float'''
-    return np.array(X).dot(Y)
-
-
-# função sigmóide, usada para classificação
-@lru_cache(maxsize=None)
-def sigmoide(x):
-    '''(float) -> float'''
-    if x > int(1e9):
-        return 1.0
-    elif x < -int(1e9):
-        return 0.0
-    try:
-        return 1.0 / (1.0 + exp(-x))
-    except OverflowError:
-        return -1.0
-
-# derivada da função sigmóide
-@lru_cache(maxsize=None)
-def der_sigmoide(x):
-    '''(float) -> float'''
-    sig = sigmoide(x)
-    return sig * (1 - sig)
+# produto escalar entre 2 vetores do R^n
+def dot_product(xs, ys):
+    return sum(x * y for x, y in zip(xs, ys))
 
 # função de ativação Smooth ReLU
+# a sua derivada é justamente a função Sigmoide
 # https://adl1995.github.io/an-overview-of-activation-functions-used-in-neural-networks.html
-@lru_cache(maxsize=None)
+# https://towardsdatascience.com/activation-functions-and-its-types-which-is-better-a9a5310cc8f
+#@lru_cache(maxsize=None)
 def s_relu(x):
     '''(float) -> float'''
     return log(1 + exp(x))
-# derivada da Smooth ReLU é justamente a função Sigmoide
+'''
+O que aprendi até agora:
+    Com a smooth relu, o algoritmo performa melhor
+    quanto menor é a taxa de aprendizado e menor a quantidade
+    de neurônios, até o limite do número de neurônios da camada
+    da saída, o que parece lógico em algum sentido.
+'''
+
+# função sigmóide, usada para classificação
+#@lru_cache(maxsize=None)
+def sigmoid(x):
+    '''(float) -> float'''
+    return 1.0 / (1.0 + exp(-x))
+'''
+O que aprendi até agora:
+    Com a sigmoide, o algoritmo performa melhor
+    com uma taxa um pouco maior do que aquela da Smooth
+    e com mais neurônios, pelo menos o triplo da qtde da saída
+'''
+
+# derivada da função sigmóide
+#@lru_cache(maxsize=None)
+def derivative_sigmoid(x):
+    '''(float) -> float'''
+    sig = sigmoid(x)
+    return sig * (1 - sig)
+
 
 def normalizar(dados):
     '''(list(list)) -> None
@@ -55,8 +64,4 @@ def normalizar(dados):
         amplitude = maximo - minimo
         for row_num in range(len(dados)):
             dados[row_num][col_num] = (dados[row_num][col_num] - minimo) / amplitude
-
-
-
-
 
