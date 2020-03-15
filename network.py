@@ -11,10 +11,9 @@ Número USP: 9318532
 """
 from functools import reduce
 from layer import Layer
-from util import sigmoid, derivative_sigmoid, s_relu
 
 class Network:
-    def __init__(self, layer_structure, learning_rate, funcao_ativacao=""):
+    def __init__(self, layer_structure, taxa, ativacao, der_ativacao):
         '''(list[int], float, str) -> None
         Cria a Rede Perceptron, de acordo com a estrutura desejada
         Sendo que no mínimo espera uma estrutura de 3 camadas,
@@ -25,28 +24,22 @@ class Network:
         mas as opções disponíveis para funcao_ativacao são:
         "sigmoide" ou "s_relu"
         '''
-        if funcao_ativacao in ("", "sig", "sigmoide"):
-            funcao_ativacao = sigmoid
-            derivada_ativacao = derivative_sigmoid
-        # A única outra opção disponível para ativação é a Smooth Relu
-        # cuja derivada é a função sigmóide
-        else:
-            funcao_ativacao = s_relu
-            derivada_ativacao = sigmoid
-
         if len(layer_structure) < 3:
             raise ValueError("Erro: deve haver ao menos 3 camadas!")
+
+        if ativacao is None or der_ativacao is None:
+            raise ValueError("Erro: deve definir a função de ativação!")
 
         self.layers = []
         self.previsoes = []
         # input layer
-        input_layer: Layer = Layer(None, layer_structure[0], learning_rate,
-                                   funcao_ativacao, derivada_ativacao)
+        input_layer: Layer = Layer(None, layer_structure[0], taxa,
+                                   ativacao, der_ativacao)
         self.layers.append(input_layer)
         # hidden layers and output layer
-        for previous, num_neurons in enumerate(layer_structure[1::]):
-            next_layer = Layer(self.layers[previous], num_neurons, learning_rate,
-                               funcao_ativacao, derivada_ativacao)
+        for previous, qtd_neurons in enumerate(layer_structure[1::]):
+            next_layer = Layer(self.layers[previous], qtd_neurons, taxa,
+                               ativacao, der_ativacao)
             self.layers.append(next_layer)
 
 
