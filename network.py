@@ -11,6 +11,8 @@ Número USP: 9318532
 """
 from functools import reduce
 from layer import Layer
+from util import s_relu
+from util import sigmoid
 
 class Network:
     def __init__(self, layer_structure, taxa, ativacao, der_ativacao):
@@ -24,7 +26,8 @@ class Network:
         mas as opções disponíveis para funcao_ativacao são:
         "sigmoide" ou "s_relu"
         '''
-        if len(layer_structure) < 3:
+        l = len(layer_structure)
+        if l < 3:
             raise ValueError("Erro: deve haver ao menos 3 camadas!")
 
         if ativacao is None or der_ativacao is None:
@@ -32,15 +35,23 @@ class Network:
 
         self.layers = []
         self.previsoes = []
-        # input layer
+        self.estrutura = layer_structure
+
+        # camada de entrada
         input_layer: Layer = Layer(None, layer_structure[0], taxa,
-                                   ativacao, der_ativacao)
+                                   s_relu, sigmoid)
         self.layers.append(input_layer)
-        # hidden layers and output layer
-        for previous, qtd_neurons in enumerate(layer_structure[1::]):
+
+        # camada(s) oculta(s)
+        for previous, qtd_neurons in enumerate(layer_structure[1::l]):
             next_layer = Layer(self.layers[previous], qtd_neurons, taxa,
                                ativacao, der_ativacao)
             self.layers.append(next_layer)
+
+        # camada de saída
+        output_layer = Layer(self.layers[-1], layer_structure[-1], taxa,
+                               s_relu, sigmoid)
+        self.layers.append(output_layer)
 
 
     def outputs(self, entrada):
@@ -76,17 +87,28 @@ class Network:
                          * (layer.previous_layer.output_cache[w]) * neuron.delta)
 
 
-    def train(self, inputs, expecteds):
+    def train(self, entradas, saidas_reais):
         '''(list[list[floats]], list[list[floats]]) -> None
         Faz o treino da rede perceptron, passando a lista de amostras
         e seus valores esperados para a função backpropagate
         poder atualizar os pesos (isto configura 1 iteração do treino)
         '''
-        for location, xs in enumerate(inputs):
-            ys = expecteds[location]
+        for location, xs in enumerate(entradas):
+            ys = saidas_reais[location]
             _ = self.outputs(xs)
             self.backpropagate(ys)
             self.update_weights()
+
+    def mse_error(self, entradas, saidas_reais):
+        mse = 0
+        for location, xs in enumerate(entradas):
+            ys = saidas_reais[location]
+            saidas = self.outputs(xs)
+            # Calcula o erro quadrático "médio"
+            for i in range(len(ys)):
+                mse += abs(ys[i] - saidas[i])
+        mse /= len(entradas) # torna-o "médio"
+        return mse
 
     def predict(self, entradas, interpretar):
         '''(list[list[floats]], list[list[floats]], Callable) -> None
@@ -98,17 +120,18 @@ class Network:
         return self.previsoes
 
     def validate(self, esperados):
-        '''(list[list[floats]], list[list[floats]], Callable) -> tuple(int, float)
+        '''(list[list[floats]], list[list[floats]], Callable) -> float
         Função para validar os exemplos do livro,
         mostrando a matriz de confusão ao final.
         DEVE ser chamado após a função predict
+        Retorna a acuracia
         '''
         if len(self.previsoes) == 0:
-            raise ValueError("Erro: não há previsões!"+
+            raise ValueError("Erro: não há previsões! "+
                              "O método predict deve ser chamado antes!")
         corretos = 0
         for y_pred, esperado in zip(self.previsoes, esperados):
             if y_pred == esperado:
                 corretos += 1
         acuracia = corretos / len(self.previsoes)
-        return corretos, acuracia
+        return acuracia

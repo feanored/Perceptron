@@ -17,7 +17,7 @@ def dot_product(xs, ys):
     return sum(x * y for x, y in zip(xs, ys))
 
 # função de ativação Smooth ReLU
-# a sua derivada é justamente a função Sigmoide
+# a sua derivada é a função Sigmoide
 # https://adl1995.github.io/an-overview-of-activation-functions-used-in-neural-networks.html
 # https://towardsdatascience.com/activation-functions-and-its-types-which-is-better-a9a5310cc8f
 #@lru_cache(maxsize=None)

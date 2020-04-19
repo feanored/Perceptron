@@ -17,6 +17,7 @@ class Scores():
         a matriz de confusão e medidas de precisão
         '''
         if len(x)*len(y) > 0 and len(x) == len(y):
+            sns.set()
             self.x = x
             self.y = y
             self.classes = []
@@ -65,16 +66,24 @@ class Scores():
         else:
             self.recall = self.acuracia
 
-    def exibir_grafico(self):
-        '''
+    def exibir_grafico(self, titulo=""):
+        '''(str) -> None
         Exibe a matriz de confusão como sendo um gráfico bonito
+        Recebe um título opcional
         '''
-        plt.figure(figsize=(5.5,5.5))
-        sns.set()
+        # Tratar nomes dos eixos
+        eixos = []
+        for x in self.classes:
+            if type(x) is np.ndarray:
+                eixos.append(x[0])
+            else:
+                eixos.append(x)
+
+        plt.figure(figsize=(5.5,5.5)).suptitle(titulo, fontsize=20)
         sns.heatmap(self.matriz, square=True, annot=True, fmt='d', cbar=False,
-        xticklabels=self.classes,
-        yticklabels=self.classes)
-        plt.xlabel('Eixo Previsto')
-        plt.ylabel('Eixo Real')
+        xticklabels=eixos,
+        yticklabels=eixos)
+        plt.xlabel("Eixo Previsto")
+        plt.ylabel("Eixo Real")
         plt.title("Matriz de confusão, acurácia: %.1f%%"%(self.acuracia*100))
         plt.show()
