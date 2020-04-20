@@ -11,8 +11,8 @@ Número USP: 9318532
 """
 from functools import reduce
 from layer import Layer
-from util import s_relu
-from util import sigmoid
+from util import s_relu, sigmoid
+from math import sqrt
 
 class Network:
     def __init__(self, layer_structure, taxa, ativacao, der_ativacao):
@@ -99,15 +99,30 @@ class Network:
             self.backpropagate(ys)
             self.update_weights()
 
-    def mse_error(self, entradas, saidas_reais):
+    def norma_l1(self, entradas, saidas_reais):
+        '''(list[list[floats]], list[list[floats]]) -> float
+        Calcula o erro de norma L1 "médio"
+        '''
+        l1 = 0
+        for location, xs in enumerate(entradas):
+            ys = saidas_reais[location]
+            saidas = self.outputs(xs)
+            for i in range(len(ys)):
+                l1 += abs(ys[i] - saidas[i])
+        l1 /= len(entradas) # torna-o "médio"
+        return l1
+
+    def norma_l2(self, entradas, saidas_reais):
+        '''(list[list[floats]], list[list[floats]]) -> float
+        Calcula o erro de norma L2 "médio" (MSE)
+        '''
         mse = 0
         for location, xs in enumerate(entradas):
             ys = saidas_reais[location]
             saidas = self.outputs(xs)
-            # Calcula o erro quadrático "médio"
             for i in range(len(ys)):
-                mse += abs(ys[i] - saidas[i])
-        mse /= len(entradas) # torna-o "médio"
+                mse += (ys[i] - saidas[i])**2
+        mse = sqrt(mse) / len(entradas) # torna-o "médio"
         return mse
 
     def predict(self, entradas, interpretar):

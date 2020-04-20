@@ -8,7 +8,7 @@ Número USP: 9318532
 from sklearn.preprocessing import OneHotEncoder
 from util import sigmoid, derivative_sigmoid, s_relu
 from network import Network
-from tqdm import tqdm
+from tqdm import tqdm_notebook as tqdm
 import numpy as np
 
 #https://www.asimovinstitute.org/neural-network-zoo/
@@ -19,7 +19,7 @@ class Constantes(enum.Enum):
 
 class Perceptron():
     def __init__(self, estrategia="QTDE", N=[1], M=100, acur_min=0.95,
-                 mse_max=0.1, ativacao="sigm", taxa=0.1):
+                 mse_max=0.1, ativacao="sigm", taxa=0.1, debug=False):
         '''(None, str, list[int], int, float, float, str, float) -> None
         Construtor da minha classe Perceptron
 
@@ -54,13 +54,10 @@ class Perceptron():
                 para a(s) camada(s) oculta(s). A camada de saída usará sempre
                 a Smooth Relu.
             *taxa: taxa de aprendizagem, padrão de 0.1
-
-        O processamento torna disponiveis os resultados e erros nos parâmetros
-        da classe, que podem ser chamados externamente.
-
+            *debug: flag para exibição de parâmetros durante o treinamento
         '''
         # Vários prints dentro da classe para debug
-        self.__DEBUG = False
+        self.__DEBUG = debug
 
         # verificação de argumentos
         if estrategia not in ("qtde", "acuracia", "mse"):
@@ -83,10 +80,10 @@ class Perceptron():
         if M < 1:
             raise ValueError("Número de treinamentos inválido!")
 
-        if mse_max < 0.1:
+        if mse_max < 0.001:
             raise ValueError("MSE máximo inválido!")
 
-        if acur_min < 0.1 or acur_min > 0.99:
+        if acur_min < 0.01 or acur_min > 0.99:
             raise ValueError("Acurácia mínima inválida!")
 
         if taxa < 0.01 or taxa > 0.99:
@@ -120,11 +117,13 @@ class Perceptron():
         return self._enc.inverse_transform(saida.reshape(1, -1))
 
     def treinar(self, x_train, y_train):
-        '''(np.array, np.array) -> int, float
-        Aqui vou fazer o processo de treinamento da rede neural
+        '''(np.array, np.array) -> None
+        Processo de treinamento da rede neural
         1- Tratar os dados, obtendo as classes das respostas
-        2- Treinar de acordo com alguma precisao de autovalidacao (futuro)
+        2- Treinar de acordo com alguma precisao de autovalidacao
         3- Armazenar no objeto os vetores com o treinamento
+        O processamento torna disponiveis os resultados e erros nos parâmetros
+        e métodos da classe, que podem ser chamados externamente.
         '''
         # onehotencoder extrai as classes únicas já ordenadas alfabeticamente
         y_encoded = self._enc.fit_transform(y_train)
@@ -153,13 +152,13 @@ class Perceptron():
             for _ in tqdm(range(self.M)):
                 network.train(x_train, y_encoded)
 
-            mse_error = network.mse_error(x_train, y_encoded)
-
+            mse_error = network.norma_l2(x_train, y_encoded)
             _ = network.predict(x_train, self.reinterpretar_saidas)
             acuracia = network.validate(y_train)
 
-            print("Acurácia: %.3f"%acuracia, end=" ")
-            print("MSE: %.3f"%mse_error)
+            if self.__DEBUG:
+                print("Acurácia: %.3f"%acuracia, end=" ")
+                print("MSE: %.3f"%mse_error)
 
 
         if self.estrategia == "acuracia":
@@ -176,18 +175,16 @@ class Perceptron():
                 for _ in tqdm(range(self.M)):
                     network.train(x_train, y_encoded)
 
-                mse_error = network.mse_error(x_train, y_encoded)
-
+                mse_error = network.norma_l2(x_train, y_encoded)
                 _ = network.predict(x_train, self.reinterpretar_saidas)
                 acuracia = network.validate(y_train)
 
                 if self.__DEBUG:
                     print("Acurácia: %.3f"%acuracia, end=" | ")
                     print("MSE: %.3f"%mse_error)
-                    print("Parâmetros: Taxa=%.3f | Neuronios=%d\n"
-                          %(self.taxa, neurons_hidden))
+                    print("Taxa=%.3f | Estrutura=%s\n"%(self.taxa, rede))
 
-                if acuracia < self.acur_min:
+                if acuracia < self.acur_min and tentativas < Constantes.LIMITE.value:
                     # aumento gradativo da taxa
                     self.taxa += 0.01
                     # aumento gradativo da qtde de neuronios ocultos
@@ -196,8 +193,6 @@ class Perceptron():
         elif self.estrategia == "mse":
             mse_error = 1
             mse_ant = 1
-            acuracia = 0
-            acuracia_ant = 0
             tentativas = 0
             network = None
             neurons_hidden = neurons_out
@@ -207,7 +202,6 @@ class Perceptron():
                 tentativas += 1
                 network_ant = network
                 mse_ant = mse_error
-                acuracia_ant = acuracia
 
                 rede = [neurons_in, neurons_hidden, neurons_out]
                 network = Network(rede, self.taxa, self.ativacao, self.der_ativacao)
@@ -215,17 +209,17 @@ class Perceptron():
                 for _ in tqdm(range(self.M)):
                     network.train(x_train, y_encoded)
 
-                mse_error = network.mse_error(x_train, y_encoded)
+                mse_error = network.norma_l2(x_train, y_encoded)
                 _ = network.predict(x_train, self.reinterpretar_saidas)
                 acuracia = network.validate(y_train)
 
                 if self.__DEBUG:
                     print("Acurácia: %.3f"%acuracia, end=" | ")
                     print("MSE: %.3f"%mse_error)
-                    print("Parâmetros: Taxa=%.3f | Neuronios=%d\n"
-                          %(self.taxa, neurons_hidden))
+                    print("Taxa=%.3f | Estrutura=%s\n"%(self.taxa, rede))
 
-                if mse_ant >= mse_error:
+                if mse_error > self.mse_max and mse_ant >= mse_error \
+                   and tentativas < Constantes.LIMITE.value:
                     # aumento gradativo da taxa
                     self.taxa += 0.1
                     # aumento gradativo da qtde de neuronios ocultos
@@ -236,15 +230,11 @@ class Perceptron():
             # volta atrás nos parâmetros
             if mse_ant < mse_error:
                 network = network_ant
-                acuracia = acuracia_ant
-                mse_error = mse_ant
                 self.taxa -= 0.1
                 self.M -= 50
 
         # salva no objeto a versão final da rede
         self.network = network
-
-        return acuracia, mse_error
 
 
     def prever(self, X):
@@ -259,16 +249,25 @@ class Perceptron():
                              "A função treinar deve ser chamada antes.")
         return self.network.predict(X, self.reinterpretar_saidas)
 
-    def mse_error(self, X, Y):
-        '''(np.array, np.array) -> float
+    def funcao_erro(self, X, Y, norma="l2"):
+        '''(np.array, np.array, str) -> float
         Calcula o erro MSE a partir de saidas obtidas e saidas esperadas
         de acordo com o estado atual da rede, que deve estar treinada
+        Por padrão retorna o erro de Norma 2, o MSE, que está
+        implementado no algoritmo de propagação retrógrada.
+        Opcionalmente retorna o erro L1, passando "l1" como parâmetro
         '''
         if self.network is None:
             raise ValueError("O objeto Network não foi inicializado! "+
                              "A função treinar deve ser chamada antes.")
+        if norma not in ("l1", "l2"):
+            raise ValueError("Opção de norma inválida!\n"+
+                             "Opções válidas são: 'l1' ou 'l2'.")
+
         y_encoded = self._enc.fit_transform(Y)
-        mse_error = self.network.mse_error(X, y_encoded)
-        return mse_error
+        if norma == "l2":
+            return self.network.norma_l2(X, y_encoded)
+        else:
+            return self.network.norma_l1(X, y_encoded)
 
 

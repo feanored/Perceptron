@@ -27,32 +27,36 @@ def main():
     vinhos.split(n_train)
     print(vinhos)
 
+    # padronizando nomes
+    x_train, x_test = vinhos.x_train, vinhos.x_test
+    y_train, y_test = vinhos.y_train, vinhos.y_test
+
     print("Treinando...")
 
-    perceptron = Perceptron(estrategia="mse", ativacao="sigm")
+    perceptron = Perceptron(estrategia="mse", ativacao="sigm", mse_max=0.01)
+    perceptron.treinar(x_train, y_train)
 
-    acuracia, mse = perceptron.treinar(vinhos.x_train, vinhos.y_train)
-
-    '''print("\nAcurácia= %.1f%%"%(acuracia*100))
-    print("MSE= %.3f"%(mse))
-    print("Taxa=%.3f"%(perceptron.taxa))
-    print(perceptron.network.estrutura)'''
+    print("Estrutura da rede:", perceptron.network.estrutura)
+    print("Taxa Ótima= %.3f"%(perceptron.taxa))
 
     print("\nPrevendo e avaliando...")
-    # Fitando os dados de teste
+    # Obtendo previsões do conjunto de treino (apenas para debug)
     y_train_pred = perceptron.prever(vinhos.x_train)
-    y_test_pred = perceptron.prever(vinhos.x_test)
 
     # minha classe geradora da matriz de confusão
     scores_t = Scores(vinhos.y_train, y_train_pred)
     scores_t.exibir_grafico("Treino")
-    mse = perceptron.mse_error(vinhos.x_train, vinhos.y_train)
-    print("Treino MSE= %.3f"%(mse))
+    print("MSE (Treino)= %.3f"%(perceptron.funcao_erro(x_train, y_train)))
+    print("L1  (Treino)= %.3f"%(perceptron.funcao_erro(x_train, y_train, norma="l1")))
 
-    scores = Scores(vinhos.y_test, y_test_pred)
+    # Fitando os dados de teste
+    y_test_pred = perceptron.prever(x_test)
+
+    # minha classe geradora da matriz de confusão
+    scores = Scores(y_test, y_test_pred)
     scores.exibir_grafico("Teste")
-    mse = perceptron.mse_error(vinhos.x_test, vinhos.y_test)
-    print("Teste MSE= %.3f"%(mse))
+    print("MSE (Teste)= %.3f"%(perceptron.funcao_erro(x_test, y_test)))
+    print("L1  (Teste)= %.3f"%(perceptron.funcao_erro(x_test, y_test, norma="l1")))
 
     print("\nAté mais!")
 
