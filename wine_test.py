@@ -33,7 +33,7 @@ def main():
 
     print("Treinando...")
 
-    perceptron = Perceptron(estrategia="mse", ativacao="sigm", mse_max=0.01)
+    perceptron = Perceptron(estrategia="acuracia", ativacao="sigm", mse_max=0.01)
     perceptron.treinar(x_train, y_train)
 
     print("Estrutura da rede:", perceptron.network.estrutura)

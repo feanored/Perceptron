@@ -15,12 +15,12 @@ from util import dot_product
 _debug = True
 
 class Neuron:
-    def __init__(self, weights, learning_rate,
-                 ativacao, der_ativacao):
-        '''(list[float], float, Callable, Callable) -> None
+    def __init__(self, weights, bias, learning_rate, ativacao, der_ativacao):
+        '''(list[float], float, float, Callable, Callable) -> None
         Construtor do Neurônio
         '''
         self.weights = weights
+        self.bias = bias
         self.ativacao = ativacao
         self.der_ativacao = der_ativacao
         self.learning_rate = learning_rate
@@ -32,7 +32,7 @@ class Neuron:
         Computa valor de ativação do neurônio, salvando o valor
         antes da função de ativação ser aplicado e retornado
         '''
-        self.output_cache = dot_product(inputs, self.weights)
+        self.output_cache = dot_product(inputs, self.weights) + self.bias
         return self.ativacao(self.output_cache)
 
     def __str__(self):

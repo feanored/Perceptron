@@ -15,8 +15,8 @@ from util import s_relu, sigmoid
 from math import sqrt
 
 class Network:
-    def __init__(self, layer_structure, taxa, ativacao, der_ativacao):
-        '''(list[int], float, str) -> None
+    def __init__(self, layer_structure, taxa, ativacoes):
+        '''(list[int], float, Tuple[Callable]) -> None
         Cria a Rede Perceptron, de acordo com a estrutura desejada
         Sendo que no mínimo espera uma estrutura de 3 camadas,
         sendo 1 camada de entrada, 1 oculta e 1 de saída.
@@ -24,33 +24,37 @@ class Network:
         qtde de neurônios de cada camada.
         Por padrão estou usando a função de ativação Sigmóide,
         mas as opções disponíveis para funcao_ativacao são:
-        "sigmoide" ou "s_relu"
+        "sigmoide" ou "s_relu".
+        O parametro ativacoes recebe uma tupla com 4 Callables,
+        que representam, em ordem, as funçoes de ativação e a sua derivada
+        para a(s) camada(s) oculta(s), e as funçoes de ativação e 
+        a sua derivada para a camada de saída.
         '''
         l = len(layer_structure)
         if l < 3:
             raise ValueError("Erro: deve haver ao menos 3 camadas!")
 
-        if ativacao is None or der_ativacao is None:
-            raise ValueError("Erro: deve definir a função de ativação!")
+        if ativacoes is None or len(ativacoes) != 4:
+            raise ValueError("Erro: deve definir as funções de ativação!")
 
         self.layers = []
         self.previsoes = []
         self.estrutura = layer_structure
 
         # camada de entrada
-        input_layer: Layer = Layer(None, layer_structure[0], taxa,
-                                   s_relu, sigmoid)
+        # não há camada anterior e nem função de ativação
+        input_layer: Layer = Layer(None, layer_structure[0], taxa)
         self.layers.append(input_layer)
 
-        # camada(s) oculta(s)
+        # camadas oculta(s)
         for previous, qtd_neurons in enumerate(layer_structure[1::l]):
             next_layer = Layer(self.layers[previous], qtd_neurons, taxa,
-                               ativacao, der_ativacao)
+                               ativacoes[0], ativacoes[1])
             self.layers.append(next_layer)
 
         # camada de saída
         output_layer = Layer(self.layers[-1], layer_structure[-1], taxa,
-                               s_relu, sigmoid)
+                               ativacoes[2], ativacoes[3])
         self.layers.append(output_layer)
 
 
@@ -58,7 +62,8 @@ class Network:
         '''(list[float]) -> list[float]
         Fornece dados de entrada para a primeira camada, em seguida, a saída
         da primeira é fornecida como entrada para a segunda, a saída da segunda
-        para a terceira, e assim por diante. (Loucura do reduce)
+        para a terceira, e assim por diante.
+        E no fim retorna as saidas da camada de saída.
         '''
         return reduce(lambda inputs, layer: layer.outputs(inputs), self.layers, entrada)
 
@@ -86,18 +91,27 @@ class Network:
                     neuron.weights[w] = neuron.weights[w] + (neuron.learning_rate
                          * (layer.previous_layer.output_cache[w]) * neuron.delta)
 
-
+    def update_bias(self):
+        '''(None) -> None
+        backpropagate() não atualiza sozinha o bias
+        Atualiza o bias dos neurônios
+        '''
+        for layer in self.layers[1:]: # pula a camada de entrada
+            for neuron in layer.neurons:
+                neuron.bias = neuron.bias + neuron.learning_rate * neuron.delta
+    
     def train(self, entradas, saidas_reais):
         '''(list[list[floats]], list[list[floats]]) -> None
         Faz o treino da rede perceptron, passando a lista de amostras
         e seus valores esperados para a função backpropagate
         poder atualizar os pesos (isto configura 1 iteração do treino)
         '''
-        for location, xs in enumerate(entradas):
-            ys = saidas_reais[location]
+        for i, xs in enumerate(entradas):
+            ys = saidas_reais[i]
             _ = self.outputs(xs)
             self.backpropagate(ys)
             self.update_weights()
+            self.update_bias()
 
     def norma_l1(self, entradas, saidas_reais):
         '''(list[list[floats]], list[list[floats]]) -> float

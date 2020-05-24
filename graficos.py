@@ -8,13 +8,13 @@ Número USP: 9318532
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from util import s_relu, sigmoide, der_sigmoide
+from util import s_relu, sigmoid, derivative_sigmoid
 
 # criando os vetores com as funções
 X = np.linspace(-2.5, 2.51, 200)
 Y1 = [s_relu(x) for x in X]
-Y2 = [sigmoide(x) for x in X]
-Y3 = [der_sigmoide(x) for x in X]
+Y2 = [sigmoid(x) for x in X]
+Y3 = [derivative_sigmoid(x) for x in X]
 
 # iniciando a figura
 sns.set()

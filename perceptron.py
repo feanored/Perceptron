@@ -5,13 +5,11 @@ Created on Tue Feb 25 18:37:12 2020
 @author: Eduardo Galvani Massino
 Número USP: 9318532
 """
+import numpy as np
+from network import Network
 from sklearn.preprocessing import OneHotEncoder
 from util import sigmoid, derivative_sigmoid, s_relu
-from network import Network
-from tqdm import tqdm_notebook as tqdm
-import numpy as np
-
-#https://www.asimovinstitute.org/neural-network-zoo/
+from tqdm import tqdm
 
 import enum
 class Constantes(enum.Enum):
@@ -58,6 +56,9 @@ class Perceptron():
         '''
         # Vários prints dentro da classe para debug
         self.__DEBUG = debug
+        
+        # Objeto tqdm para mostrar progresso do treino
+        self.tqdm = tqdm
 
         # verificação de argumentos
         if estrategia not in ("qtde", "acuracia", "mse"):
@@ -73,6 +74,11 @@ class Perceptron():
             self.der_ativacao = sigmoid
         else:
             raise ValueError("Função de ativação incorreta!")
+        
+        # a principio, a saída usa a mesma função de ativação
+        # mas poderá ser alterado no programa principal
+        self.ativacao_saida = self.ativacao
+        self.der_ativacao_saida = self.der_ativacao
 
         if len(N) < 1 or N[0] < 1:
             raise ValueError("Número de neurônios ocultos inválido!")
@@ -146,10 +152,12 @@ class Perceptron():
             for hidden in self.N:
                 rede.append(hidden)
             rede.append(neurons_out)
+            
+            ativacoes = (self.ativacao, self.der_ativacao, 
+                         self.ativacao_saida, self.der_ativacao_saida)
+            network = Network(rede, self.taxa, ativacoes)
 
-            network = Network(rede, self.taxa, self.ativacao, self.der_ativacao)
-
-            for _ in tqdm(range(self.M)):
+            for _ in self.tqdm(range(self.M)):
                 network.train(x_train, y_encoded)
 
             mse_error = network.norma_l2(x_train, y_encoded)
@@ -170,9 +178,11 @@ class Perceptron():
                 tentativas += 1
 
                 rede = [neurons_in, neurons_hidden, neurons_out]
-                network = Network(rede, self.taxa, self.ativacao, self.der_ativacao)
+                ativacoes = (self.ativacao, self.der_ativacao, 
+                         self.ativacao_saida, self.der_ativacao_saida)
+                network = Network(rede, self.taxa, ativacoes)
 
-                for _ in tqdm(range(self.M)):
+                for _ in self.tqdm(range(self.M)):
                     network.train(x_train, y_encoded)
 
                 mse_error = network.norma_l2(x_train, y_encoded)
@@ -204,9 +214,11 @@ class Perceptron():
                 mse_ant = mse_error
 
                 rede = [neurons_in, neurons_hidden, neurons_out]
-                network = Network(rede, self.taxa, self.ativacao, self.der_ativacao)
+                ativacoes = (self.ativacao, self.der_ativacao, 
+                         self.ativacao_saida, self.der_ativacao_saida)
+                network = Network(rede, self.taxa, ativacoes)
 
-                for _ in tqdm(range(self.M)):
+                for _ in self.tqdm(range(self.M)):
                     network.train(x_train, y_encoded)
 
                 mse_error = network.norma_l2(x_train, y_encoded)
