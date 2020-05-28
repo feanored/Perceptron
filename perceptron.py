@@ -8,7 +8,7 @@ Número USP: 9318532
 import numpy as np
 from network import Network
 from sklearn.preprocessing import OneHotEncoder
-from util import sigmoid, derivative_sigmoid, s_relu
+from util import sigmoid, derivative_sigmoid, s_relu, idem, one
 from tqdm import tqdm
 
 import enum
@@ -16,7 +16,7 @@ class Constantes(enum.Enum):
     LIMITE = 1000
 
 class Perceptron():
-    def __init__(self, estrategia="QTDE", N=[1], M=100, acur_min=0.95,
+    def __init__(self, estrategia="qtde", N=[1], M=100, acur_min=0.95,
                  mse_max=0.1, ativacao="sigm", taxa=0.1, debug=False):
         '''(None, str, list[int], int, float, float, str, float) -> None
         Construtor da minha classe Perceptron
@@ -43,7 +43,7 @@ class Perceptron():
                 de acordo com a estratégia.
             *M: quantidade de treinamentos desejada, pode ser maior que o
                 LIMITE se a estratégia for a de quantidade de treinamentos,
-                o valor padrão é 50;
+                o valor padrão é 100;
             *acur_min: valor mínimo da acurácia, levado em conta apenas se a
                 estratégia utilizada for a de maximizar a acuracia;
             *mse_max: valor máximo do erro quadrático médio, levado em conta
@@ -64,10 +64,13 @@ class Perceptron():
         if estrategia not in ("qtde", "acuracia", "mse"):
             raise ValueError("Informe uma estratégia válida!")
 
-        if ativacao == "sigm":
+        if ativacao == "linear":
+            self.ativacao = idem
+            self.der_ativacao = one
+        elif ativacao == "sigm":
             self.ativacao = sigmoid
             self.der_ativacao = derivative_sigmoid
-        # A única outra opção disponível para ativação é a Smooth Relu
+        # Uma outra opção disponível para ativação é a Smooth Relu
         # cuja derivada é a função sigmóide
         elif ativacao == "relu":
             self.ativacao = s_relu
@@ -112,17 +115,7 @@ class Perceptron():
         # objeto network
         self.network = None
 
-    def reinterpretar_saidas(self, saidas):
-        '''(array) -> np.array
-        Reinterpreta o neurônio de saída com as classes desejadas
-        Faz isso extraindo o valor máximo de ativação da camada de saída
-        como sendo o neurônio que foi ativado
-        '''
-        maximo = max(saidas)
-        saida = np.array([float(x == maximo) for x in saidas])
-        return self._enc.inverse_transform(saida.reshape(1, -1))
-
-    def treinar(self, x_train, y_train):
+    def treinar(self, x_train, y_train, m=0):
         '''(np.array, np.array) -> None
         Processo de treinamento da rede neural
         1- Tratar os dados, obtendo as classes das respostas
@@ -134,9 +127,18 @@ class Perceptron():
         # onehotencoder extrai as classes únicas já ordenadas alfabeticamente
         y_encoded = self._enc.fit_transform(y_train)
         self.classes = self._enc.categories_[0]
+        if self.__DEBUG:
+            print(self._enc.categories)
+            print(y_train[:10], len(y_train)) 
+            print(y_encoded[:10], len(y_encoded))
 
         # vou assumir que os dados estejam normalizados/tratados devidamente
-
+        
+        # aceita trocar o número de treinos, caso esteja
+        # definido na estratégia de qtde e o parâmetro m > 0
+        if self.estrategia == "qtde" and m > 0:
+            self.M = m
+        
         # define qtde de neuronios de entrada e de saída de acordo
         # com os dados de treino
         neurons_in = x_train.shape[1]
@@ -159,12 +161,11 @@ class Perceptron():
 
             for _ in self.tqdm(range(self.M)):
                 network.train(x_train, y_encoded)
-
-            mse_error = network.norma_l2(x_train, y_encoded)
-            _ = network.predict(x_train, self.reinterpretar_saidas)
-            acuracia = network.validate(y_train)
-
+            
             if self.__DEBUG:
+                mse_error = network.norma_l2(x_train, y_encoded)
+                _ = network.predict(x_train, self.reinterpretar_saidas)
+                acuracia = network.validate(y_train)
                 print("Acurácia: %.3f"%acuracia, end=" ")
                 print("MSE: %.3f"%mse_error)
 
@@ -247,19 +248,46 @@ class Perceptron():
 
         # salva no objeto a versão final da rede
         self.network = network
+        
+    def reinterpretar_saidas(self, saidas):
+        '''(array) -> np.array
+        Reinterpreta o neurônio de saída com as classes desejadas
+        Faz isso extraindo o valor máximo de ativação da camada de saída
+        como sendo o neurônio que foi ativado, quando é usada uma função
+        de ativação na saída
+        Se for uma saída linear, apenas devolve saida
+        '''
+        maximo = max(saidas)
+        saida = np.array([int(x == maximo) for x in saidas])
+        return self._enc.inverse_transform(saida.reshape(1, -1))
 
-
-    def prever(self, X):
-        '''(np.array) -> np.array
+    def prever(self, X, interpretar=None):
+        '''(np.array, Callable) -> np.array
         Fazer a previsão de valores, uma vez que a rede esteja treinada
         Vou fazer de forma que retorne o vetor das previsões
         e irá aceitar como entrada qualquer vetor que tenha o
         mesmo shape do que o self._x
+        Se for passada uma função de ativação alternativa, esta será usada
+        pra interpretar os neurônios de saída
         '''
         if self.network is None:
             raise ValueError("O objeto Network não foi inicializado! "+
                              "A função treinar deve ser chamada antes.")
-        return self.network.predict(X, self.reinterpretar_saidas)
+        if interpretar is None:
+            return self.network.predict(X, self.reinterpretar_saidas)
+        return self.network.predict(X, interpretar)
+    
+    def processar(self, X):
+        '''
+        Processa o vetor de entradas X e retorna a saída sem interpretação
+        '''
+        if self.network is None:
+            raise ValueError("O objeto Network não foi inicializado! "+
+                             "A função treinar deve ser chamada antes.")
+        saidas = []
+        for x in X:
+            saidas.append(self.network.outputs(x))
+        return saidas
 
     def funcao_erro(self, X, Y, norma="l2"):
         '''(np.array, np.array, str) -> float

@@ -9,7 +9,7 @@
 @author: Eduardo Galvani Massino
 Número USP: 9318532
 """
-from math import exp, log
+import numpy as np
 #from functools import lru_cache
 
 # produto escalar entre 2 vetores do R^n
@@ -23,7 +23,11 @@ def dot_product(xs, ys):
 #@lru_cache(maxsize=None)
 def s_relu(x):
     '''(float) -> float'''
-    return log(1 + exp(x))
+    try:
+        return np.log(1 + np.exp(x))
+    except OverflowError:
+        print(x)
+        raise OverflowError("Valor estranho")
 '''
 O que aprendi até agora:
     Com a smooth relu, o algoritmo performa melhor
@@ -36,7 +40,11 @@ O que aprendi até agora:
 #@lru_cache(maxsize=None)
 def sigmoid(x):
     '''(float) -> float'''
-    return 1.0 / (1.0 + exp(-x))
+    try:
+        return 1.0 / (1.0 + np.exp(-x))
+    except OverflowError:
+        print(x)
+        raise OverflowError("Valor estranho")
 '''
 O que aprendi até agora:
     Com a sigmoide, o algoritmo performa melhor
@@ -50,6 +58,14 @@ def derivative_sigmoid(x):
     '''(float) -> float'''
     sig = sigmoid(x)
     return sig * (1 - sig)
+
+# Função de ativação linear
+def idem(x):
+    return x
+
+# Derivada constante da ativação linear
+def one(x):
+    return 1
 
 
 def normalizar(dados):
