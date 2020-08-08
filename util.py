@@ -10,11 +10,6 @@
 Número USP: 9318532
 """
 import numpy as np
-#from functools import lru_cache
-
-# produto escalar entre 2 vetores do R^n
-def dot_product(xs, ys):
-    return sum(x * y for x, y in zip(xs, ys))
 
 # função de ativação Smooth ReLU
 # a sua derivada é a função Sigmoide
@@ -59,6 +54,7 @@ def derivative_sigmoid(x):
     sig = sigmoid(x)
     return sig * (1 - sig)
 
+
 # Função de ativação linear
 def idem(x):
     return x
@@ -68,16 +64,24 @@ def one(x):
     return 1
 
 
-def normalizar(dados):
+def normalizar(dados, tqdm):
     '''(list(list)) -> None
     Faz a normalização dos dados, que ficarão de forma que
-    o minimo = 0 e o maximo = 1
+    o minimo = 0 e o maximo = 1.
+    Antes disso removo os NAN do vetor
     '''
-    for col_num in range(len(dados[0])):
+    for col_num in tqdm(range(len(dados[0]))):
+        for row_num in range(len(dados)):
+            if np.isnan(dados[row_num][col_num]):
+                dados[row_num, col_num] = 0
+
+    for col_num in tqdm(range(len(dados[0]))):
         coluna = [row[col_num] for row in dados]
         maximo = max(coluna)
         minimo = min(coluna)
         amplitude = maximo - minimo
+        if amplitude == 0:
+            amplitude = 1
         for row_num in range(len(dados)):
-            dados[row_num][col_num] = (dados[row_num][col_num] - minimo) / amplitude
+            dados[row_num, col_num] = (dados[row_num, col_num] - minimo) / amplitude
 

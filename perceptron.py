@@ -13,11 +13,11 @@ from tqdm import tqdm
 
 import enum
 class Constantes(enum.Enum):
-    LIMITE = 1000
+    LIMITE = 10
 
 class Perceptron():
     def __init__(self, estrategia="qtde", N=[1], M=100, acur_min=0.95,
-                 mse_max=0.1, ativacao="sigm", taxa=0.1, debug=False):
+                 mse_max=0.1, ativacao="sigm", taxa=0.1, debug=0):
         '''(None, str, list[int], int, float, float, str, float) -> None
         Construtor da minha classe Perceptron
 
@@ -95,7 +95,7 @@ class Perceptron():
         if acur_min < 0.01 or acur_min > 0.99:
             raise ValueError("Acurácia mínima inválida!")
 
-        if taxa < 0.01 or taxa > 0.99:
+        if taxa <= 0 or taxa >= 1:
             raise ValueError("Taxa de aprendizado inválida!")
 
         self.estrategia = estrategia
@@ -127,10 +127,10 @@ class Perceptron():
         # onehotencoder extrai as classes únicas já ordenadas alfabeticamente
         y_encoded = self._enc.fit_transform(y_train)
         self.classes = self._enc.categories_[0]
-        if self.__DEBUG:
+        if self.__DEBUG == 2:
             print(self._enc.categories)
-            print(y_train[:10], len(y_train)) 
-            print(y_encoded[:10], len(y_encoded))
+            print(y_train[:5], len(y_train)) 
+            print(y_encoded[:5], len(y_encoded))
 
         # vou assumir que os dados estejam normalizados/tratados devidamente
         
@@ -146,7 +146,9 @@ class Perceptron():
 
         for i in range(len(self.N)):
             if self.N[i] < neurons_out:
-                self.N[i] = neurons_out
+                self.N[i] = min(int(np.ceil(neurons_in*2/3 + neurons_out)), neurons_in)
+        if self.__DEBUG == 1:
+            print("Neurônios: %s"%self.N)
 
         if self.estrategia == "qtde":
             rede = []
@@ -162,7 +164,7 @@ class Perceptron():
             for _ in self.tqdm(range(self.M)):
                 network.train(x_train, y_encoded)
             
-            if self.__DEBUG:
+            if self.__DEBUG == 1:
                 mse_error = network.norma_l2(x_train, y_encoded)
                 _ = network.predict(x_train, self.reinterpretar_saidas)
                 acuracia = network.validate(y_train)
@@ -170,12 +172,13 @@ class Perceptron():
                 print("MSE: %.3f"%mse_error)
 
 
-        if self.estrategia == "acuracia":
+        elif self.estrategia == "acuracia":
             acuracia = 0
             tentativas = 0
-            neurons_hidden = neurons_out
+            neurons_hidden = self.N[0]
 
-            while acuracia < self.acur_min and tentativas < Constantes.LIMITE.value:
+            while acuracia < self.acur_min and neurons_hidden <= neurons_in \
+                  and tentativas < Constantes.LIMITE.value:
                 tentativas += 1
 
                 rede = [neurons_in, neurons_hidden, neurons_out]
@@ -190,16 +193,18 @@ class Perceptron():
                 _ = network.predict(x_train, self.reinterpretar_saidas)
                 acuracia = network.validate(y_train)
 
-                if self.__DEBUG:
+                if self.__DEBUG == 1:
                     print("Acurácia: %.3f"%acuracia, end=" | ")
                     print("MSE: %.3f"%mse_error)
                     print("Taxa=%.3f | Estrutura=%s\n"%(self.taxa, rede))
 
-                if acuracia < self.acur_min and tentativas < Constantes.LIMITE.value:
+                if acuracia < self.acur_min:
                     # aumento gradativo da taxa
-                    self.taxa += 0.01
+                    self.taxa += 0.1
+                if acuracia < self.acur_min and neurons_hidden < neurons_in:
                     # aumento gradativo da qtde de neuronios ocultos
-                    neurons_hidden += 1
+                    neurons_hidden += int(np.ceil((neurons_in-neurons_out)*0.1))
+                    neurons_hidden = min(neurons_hidden, neurons_in)
 
         elif self.estrategia == "mse":
             mse_error = 1
@@ -226,7 +231,7 @@ class Perceptron():
                 _ = network.predict(x_train, self.reinterpretar_saidas)
                 acuracia = network.validate(y_train)
 
-                if self.__DEBUG:
+                if self.__DEBUG == 1:
                     print("Acurácia: %.3f"%acuracia, end=" | ")
                     print("MSE: %.3f"%mse_error)
                     print("Taxa=%.3f | Estrutura=%s\n"%(self.taxa, rede))
@@ -236,15 +241,16 @@ class Perceptron():
                     # aumento gradativo da taxa
                     self.taxa += 0.1
                     # aumento gradativo da qtde de neuronios ocultos
-                    neurons_hidden += 1
+                    neurons_hidden += int(np.floor((neurons_in-neurons_out)*0.1))
+                    neurons_hidden = min(neurons_hidden, neurons_in)
                     # aumento gradativo do número de treinos
-                    self.M += 50
+                    self.M += 5
 
             # volta atrás nos parâmetros
             if mse_ant < mse_error:
                 network = network_ant
                 self.taxa -= 0.1
-                self.M -= 50
+                self.M -= 5
 
         # salva no objeto a versão final da rede
         self.network = network
@@ -255,7 +261,6 @@ class Perceptron():
         Faz isso extraindo o valor máximo de ativação da camada de saída
         como sendo o neurônio que foi ativado, quando é usada uma função
         de ativação na saída
-        Se for uma saída linear, apenas devolve saida
         '''
         maximo = max(saidas)
         saida = np.array([int(x == maximo) for x in saidas])

@@ -13,6 +13,7 @@ from functools import reduce
 from layer import Layer
 from util import s_relu, sigmoid
 from math import sqrt
+import numpy as np
 
 class Network:
     def __init__(self, layer_structure, taxa, ativacoes):
@@ -37,25 +38,28 @@ class Network:
         if ativacoes is None or len(ativacoes) != 4:
             raise ValueError("Erro: deve definir as funções de ativação!")
 
-        self.layers = []
-        self.previsoes = []
+        self.layers = np.array([], dtype=np.float64)
+        self.previsoes = np.array([], dtype=np.float64)
         self.estrutura = layer_structure
 
         # camada de entrada
         # não há camada anterior e nem função de ativação
         input_layer: Layer = Layer(None, layer_structure[0], taxa)
-        self.layers.append(input_layer)
+        self.layers = np.append(self.layers, input_layer)
+        #self.layers.append(input_layer)
 
         # camadas oculta(s)
-        for previous, qtd_neurons in enumerate(layer_structure[1::l]):
-            next_layer = Layer(self.layers[previous], qtd_neurons, taxa,
+        for previous, qtd_neurons in np.ndenumerate(layer_structure[1::l]):
+            next_layer = Layer(self.layers[previous[0]], qtd_neurons, taxa,
                                ativacoes[0], ativacoes[1])
-            self.layers.append(next_layer)
+            self.layers = np.append(self.layers, next_layer)
+            #self.layers.append(next_layer)
 
         # camada de saída
         output_layer = Layer(self.layers[-1], layer_structure[-1], taxa,
                                ativacoes[2], ativacoes[3])
-        self.layers.append(output_layer)
+        self.layers = np.append(self.layers, output_layer)
+        #self.layers.append(output_layer)
 
 
     def outputs(self, entrada):
@@ -65,7 +69,14 @@ class Network:
         para a terceira, e assim por diante.
         E no fim retorna as saidas da camada de saída.
         '''
-        return reduce(lambda inputs, layer: layer.outputs(inputs), self.layers, entrada)
+        saida = self.layers[0].outputs(entrada)
+        #print(entrada)
+        #print(0, saida)
+        for i in range(1, len(self.layers)):
+            saida = self.layers[i].outputs(saida)
+        #print(i, saida)
+        return saida
+        #return reduce(lambda inputs, layer: layer.outputs(inputs), self.layers, entrada)
 
 
     def backpropagate(self, expected):
@@ -74,11 +85,11 @@ class Network:
         em comparação com a saída esperada
         '''
         # calcula delta para os neurônios da camada de saída
-        last_layer: int = len(self.layers) - 1
-        self.layers[last_layer].calculate_deltas_for_output_layer(expected)
+        last_layer = len(self.layers) - 1
+        self.layers[last_layer].calcular_delta_camada_de_saida(expected)
         # calcula delta para as camadas ocultas na ordem inversa
         for l in range(last_layer - 1, 0, -1):
-            self.layers[l].calculate_deltas_for_hidden_layer(self.layers[l + 1])
+            self.layers[l].calcular_delta_camada_oculta(self.layers[l + 1])
 
     def update_weights(self):
         '''(None) -> None
@@ -88,7 +99,7 @@ class Network:
         for layer in self.layers[1:]: # pula a camada de entrada
             for neuron in layer.neurons:
                 for w in range(len(neuron.weights)):
-                    neuron.weights[w] = neuron.weights[w] + (neuron.learning_rate
+                    neuron.weights[w,] = neuron.weights[w,] + (neuron.learning_rate
                          * (layer.previous_layer.output_cache[w]) * neuron.delta)
 
     def update_bias(self):
@@ -118,8 +129,8 @@ class Network:
         Calcula o erro de norma L1 "médio"
         '''
         l1 = 0
-        for location, xs in enumerate(entradas):
-            ys = saidas_reais[location]
+        for j, xs in enumerate(entradas):
+            ys = saidas_reais[j]
             saidas = self.outputs(xs)
             for i in range(len(ys)):
                 l1 += abs(ys[i] - saidas[i])
@@ -131,8 +142,8 @@ class Network:
         Calcula o erro de norma L2 "médio" (MSE)
         '''
         mse = 0
-        for location, xs in enumerate(entradas):
-            ys = saidas_reais[location]
+        for j, xs in enumerate(entradas):
+            ys = saidas_reais[j]
             saidas = self.outputs(xs)
             for i in range(len(ys)):
                 mse += (ys[i] - saidas[i])**2
@@ -143,10 +154,11 @@ class Network:
         '''(list[list[floats]], list[list[floats]], Callable) -> None
         Faz a previsão dos valores da Rede
         '''
-        self.previsoes = []
+        self.previsoes = np.array([], dtype=np.float64)
         for entrada in entradas:
-            self.previsoes.append(interpretar(self.outputs(entrada)))
-        return self.previsoes
+            self.previsoes = np.append(self.previsoes, interpretar(self.outputs(entrada)))
+            #self.previsoes.append(interpretar(self.outputs(entrada)))
+        return self.previsoes.reshape(-1, 1)
 
     def validate(self, esperados):
         '''(list[list[floats]], list[list[floats]], Callable) -> float
@@ -159,7 +171,7 @@ class Network:
             raise ValueError("Erro: não há previsões! "+
                              "O método predict deve ser chamado antes!")
         corretos = 0
-        for y_pred, esperado in zip(self.previsoes, esperados):
+        for y_pred, esperado in zip(self.previsoes.reshape(-1, 1), esperados):
             if y_pred == esperado:
                 corretos += 1
         acuracia = corretos / len(self.previsoes)

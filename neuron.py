@@ -9,7 +9,7 @@
 @author: Eduardo Galvani Massino
 Número USP: 9318532
 """
-from util import dot_product
+import numpy as np
 
 # Ativar ou desativar o debug dos neurônios
 _debug = True
@@ -32,7 +32,7 @@ class Neuron:
         Computa valor de ativação do neurônio, salvando o valor
         antes da função de ativação ser aplicado e retornado
         '''
-        self.output_cache = dot_product(inputs, self.weights) + self.bias
+        self.output_cache = np.dot(inputs, self.weights) + self.bias
         return self.ativacao(self.output_cache)
 
     def __str__(self):
