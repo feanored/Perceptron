@@ -9,9 +9,8 @@
 @author: Eduardo Galvani Massino
 Número USP: 9318532
 """
-from functools import reduce
+#from functools import reduce
 from layer import Layer
-from util import s_relu, sigmoid
 from math import sqrt
 import numpy as np
 
@@ -25,7 +24,7 @@ class Network:
         qtde de neurônios de cada camada.
         Por padrão estou usando a função de ativação Sigmóide,
         mas as opções disponíveis para funcao_ativacao são:
-        "sigmoide" ou "s_relu".
+        "sigmoide" "s_relu".
         O parametro ativacoes recebe uma tupla com 4 Callables,
         que representam, em ordem, as funçoes de ativação e a sua derivada
         para a(s) camada(s) oculta(s), e as funçoes de ativação e 
@@ -44,7 +43,7 @@ class Network:
 
         # camada de entrada
         # não há camada anterior e nem função de ativação
-        input_layer: Layer = Layer(None, layer_structure[0], taxa)
+        input_layer = Layer(None, layer_structure[0], taxa)
         self.layers = np.append(self.layers, input_layer)
         #self.layers.append(input_layer)
 
@@ -79,14 +78,14 @@ class Network:
         #return reduce(lambda inputs, layer: layer.outputs(inputs), self.layers, entrada)
 
 
-    def backpropagate(self, expected):
+    def backpropagate(self, saidas_reais):
         '''(list[float]) -> None
         Calcula as mudanças em cada neurônio com base nos erros da saída
         em comparação com a saída esperada
         '''
         # calcula delta para os neurônios da camada de saída
         last_layer = len(self.layers) - 1
-        self.layers[last_layer].calcular_delta_camada_de_saida(expected)
+        self.layers[last_layer].calcular_delta_camada_de_saida(saidas_reais)
         # calcula delta para as camadas ocultas na ordem inversa
         for l in range(last_layer - 1, 0, -1):
             self.layers[l].calcular_delta_camada_oculta(self.layers[l + 1])
@@ -124,31 +123,19 @@ class Network:
             self.update_weights()
             self.update_bias()
 
-    def norma_l1(self, entradas, saidas_reais):
-        '''(list[list[floats]], list[list[floats]]) -> float
-        Calcula o erro de norma L1 "médio"
-        '''
-        l1 = 0
-        for j, xs in enumerate(entradas):
-            ys = saidas_reais[j]
-            saidas = self.outputs(xs)
-            for i in range(len(ys)):
-                l1 += abs(ys[i] - saidas[i])
-        l1 /= len(entradas) # torna-o "médio"
-        return l1
-
-    def norma_l2(self, entradas, saidas_reais):
+    def mse(self, entradas, saidas_reais):
         '''(list[list[floats]], list[list[floats]]) -> float
         Calcula o erro de norma L2 "médio" (MSE)
         '''
-        mse = 0
+        erro = np.array([], dtype=np.float64)
         for j, xs in enumerate(entradas):
+            l2 = 0
             ys = saidas_reais[j]
             saidas = self.outputs(xs)
             for i in range(len(ys)):
-                mse += (ys[i] - saidas[i])**2
-        mse = sqrt(mse) / len(entradas) # torna-o "médio"
-        return mse
+                l2 += (ys[i] - saidas[i])**2
+            erro = np.append(erro, sqrt(l2)) #/ len(ys))
+        return np.mean(erro)
 
     def predict(self, entradas, interpretar):
         '''(list[list[floats]], list[list[floats]], Callable) -> None

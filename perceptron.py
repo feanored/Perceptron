@@ -6,10 +6,10 @@ Created on Tue Feb 25 18:37:12 2020
 Número USP: 9318532
 """
 import numpy as np
+from util import *
+from tqdm import tqdm
 from network import Network
 from sklearn.preprocessing import OneHotEncoder
-from util import sigmoid, derivative_sigmoid, s_relu, idem, one
-from tqdm import tqdm
 
 import enum
 class Constantes(enum.Enum):
@@ -70,11 +70,21 @@ class Perceptron():
         elif ativacao == "sigm":
             self.ativacao = sigmoid
             self.der_ativacao = derivative_sigmoid
-        # Uma outra opção disponível para ativação é a Smooth Relu
-        # cuja derivada é a função sigmóide
-        elif ativacao == "relu":
+        elif ativacao == "s_relu":
             self.ativacao = s_relu
             self.der_ativacao = sigmoid
+        elif ativacao == "tanh":
+            self.ativacao = tanh
+            self.der_ativacao = der_tanh
+        elif ativacao == "relu":
+            self.ativacao = relu
+            self.der_ativacao = der_relu
+        elif ativacao == "l_relu":
+            self.ativacao = l_relu
+            self.der_ativacao = der_l_relu
+        elif ativacao == "elu":
+            self.ativacao = elu
+            self.der_ativacao = der_elu
         else:
             raise ValueError("Função de ativação incorreta!")
         
@@ -115,7 +125,7 @@ class Perceptron():
         # objeto network
         self.network = None
 
-    def treinar(self, x_train, y_train, m=0):
+    def treinar(self, x_train, y_train, M=0):
         '''(np.array, np.array) -> None
         Processo de treinamento da rede neural
         1- Tratar os dados, obtendo as classes das respostas
@@ -136,8 +146,8 @@ class Perceptron():
         
         # aceita trocar o número de treinos, caso esteja
         # definido na estratégia de qtde e o parâmetro m > 0
-        if self.estrategia == "qtde" and m > 0:
-            self.M = m
+        if self.estrategia == "qtde" and M > 0:
+            self.M = M
         
         # define qtde de neuronios de entrada e de saída de acordo
         # com os dados de treino
@@ -165,7 +175,7 @@ class Perceptron():
                 network.train(x_train, y_encoded)
             
             if self.__DEBUG == 1:
-                mse_error = network.norma_l2(x_train, y_encoded)
+                mse_error = network.mse(x_train, y_encoded)
                 _ = network.predict(x_train, self.reinterpretar_saidas)
                 acuracia = network.validate(y_train)
                 print("Acurácia: %.3f"%acuracia, end=" ")
@@ -189,7 +199,7 @@ class Perceptron():
                 for _ in self.tqdm(range(self.M)):
                     network.train(x_train, y_encoded)
 
-                mse_error = network.norma_l2(x_train, y_encoded)
+                mse_error = network.mse(x_train, y_encoded)
                 _ = network.predict(x_train, self.reinterpretar_saidas)
                 acuracia = network.validate(y_train)
 
@@ -227,7 +237,7 @@ class Perceptron():
                 for _ in self.tqdm(range(self.M)):
                     network.train(x_train, y_encoded)
 
-                mse_error = network.norma_l2(x_train, y_encoded)
+                mse_error = network.mse(x_train, y_encoded)
                 _ = network.predict(x_train, self.reinterpretar_saidas)
                 acuracia = network.validate(y_train)
 
@@ -294,25 +304,17 @@ class Perceptron():
             saidas.append(self.network.outputs(x))
         return saidas
 
-    def funcao_erro(self, X, Y, norma="l2"):
+    def funcao_erro(self, X, Y):
         '''(np.array, np.array, str) -> float
         Calcula o erro MSE a partir de saidas obtidas e saidas esperadas
         de acordo com o estado atual da rede, que deve estar treinada
         Por padrão retorna o erro de Norma 2, o MSE, que está
         implementado no algoritmo de propagação retrógrada.
-        Opcionalmente retorna o erro L1, passando "l1" como parâmetro
         '''
         if self.network is None:
             raise ValueError("O objeto Network não foi inicializado! "+
                              "A função treinar deve ser chamada antes.")
-        if norma not in ("l1", "l2"):
-            raise ValueError("Opção de norma inválida!\n"+
-                             "Opções válidas são: 'l1' ou 'l2'.")
-
         y_encoded = self._enc.fit_transform(Y)
-        if norma == "l2":
-            return self.network.norma_l2(X, y_encoded)
-        else:
-            return self.network.norma_l1(X, y_encoded)
+        return self.network.mse(X, y_encoded)
 
 

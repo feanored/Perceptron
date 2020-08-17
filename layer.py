@@ -9,7 +9,7 @@
 @author: Eduardo Galvani Massino
 Número USP: 9318532
 """
-from random import random
+from util import get_normal_truncada
 from neuron import Neuron
 import numpy as np
 
@@ -21,19 +21,20 @@ class Layer:
         '''
         self.neurons = np.array([], dtype=np.float64)
         self.previous_layer = previous_layer
+        self.output_cache = np.zeros(num_neurons)
+        # gerador de va normal truncada
+        normal_t = get_normal_truncada(mean=0, low=-1, up=1)
+
         # inicializa pesos aleatoriamente, exceto para camada de entrada
         for i in range(num_neurons):
-            if previous_layer is None:
-                pesos_random = np.array([], dtype=np.float64)
-                bias = 0
-            else:
-                pesos_random = np.array([random() for _ in range(len(previous_layer.neurons))])
+            pesos = None
+            bias = None
+            if previous_layer is not None:
+                pesos = normal_t.rvs(len(previous_layer.neurons))
                 bias = 0.01
-            neuron = Neuron(pesos_random, bias, learning_rate, ativacao, der_ativacao)
+            
+            neuron = Neuron(pesos, bias, learning_rate, ativacao, der_ativacao)
             self.neurons = np.append(self.neurons, neuron)
-            #self.neurons.append(neuron)
-        # é a função z, antes de aplicar a função de ativação
-        self.output_cache = np.array([0.0 for _ in range(num_neurons)])
 
     def outputs(self, inputs):
         '''(list[float]) -> list[float]

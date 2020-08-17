@@ -42,9 +42,4 @@ class Neuron:
         '''
         if _debug:
             return "%.9f"%self.output_cache
-        else:
-            return "**Debug OFF**"
-
-    def __repr__(self):
-        '''(None) -> str'''
-        return self.__str__()
+        return ""

@@ -10,50 +10,70 @@
 Número USP: 9318532
 """
 import numpy as np
+from tqdm.notebook import tqdm
+from scipy.stats import truncnorm
 
 # função de ativação Smooth ReLU
-# a sua derivada é a função Sigmoide
-# https://adl1995.github.io/an-overview-of-activation-functions-used-in-neural-networks.html
-# https://towardsdatascience.com/activation-functions-and-its-types-which-is-better-a9a5310cc8f
-#@lru_cache(maxsize=None)
+# a sua derivada é a função Sigmoid
 def s_relu(x):
     '''(float) -> float'''
-    try:
-        return np.log(1 + np.exp(x))
-    except OverflowError:
-        print(x)
-        raise OverflowError("Valor estranho")
-'''
-O que aprendi até agora:
-    Com a smooth relu, o algoritmo performa melhor
-    quanto menor é a taxa de aprendizado e menor a quantidade
-    de neurônios, até o limite do número de neurônios da camada
-    da saída, o que parece lógico em algum sentido.
-'''
+    return np.log(1 + np.exp(x))
 
-# função sigmóide, usada para classificação
-#@lru_cache(maxsize=None)
+# função sigmoid, usada para classificação e a camada de saída
 def sigmoid(x):
     '''(float) -> float'''
-    try:
-        return 1.0 / (1.0 + np.exp(-x))
-    except OverflowError:
-        print(x)
-        raise OverflowError("Valor estranho")
-'''
-O que aprendi até agora:
-    Com a sigmoide, o algoritmo performa melhor
-    com uma taxa um pouco maior do que aquela da Smooth
-    e com mais neurônios, pelo menos o triplo da qtde da saída
-'''
+    return 1.0 / (1.0 + np.exp(-x))
 
 # derivada da função sigmóide
-#@lru_cache(maxsize=None)
-def derivative_sigmoid(x):
+def der_sigmoid(x):
     '''(float) -> float'''
     sig = sigmoid(x)
     return sig * (1 - sig)
 
+def tanh(x):
+    '''(float) -> float'''
+    return 2*sigmoid(2*x) - 1
+
+def der_tanh(x):
+    '''(float) -> float'''
+    tan = tanh(x)
+    return 1 - tan*tan
+
+def relu(x):
+    '''(float) -> float'''
+    return max(0, x)
+
+def der_relu(x):
+    '''(float) -> float'''
+    return 1 if x >= 0 else 0
+
+# parâmetro de vazamento
+leaky = 1.0/5.5
+
+def l_relu(x):
+    '''(float) -> float'''
+    return x if x >= 0 else leaky*x
+
+def der_l_relu(x):
+    '''(float) -> float'''
+    return 1 if x >= 0 else leaky
+
+
+def elu(x):
+    '''(float) -> float'''
+    a = 1
+    if x >= 0:
+        return x
+    else:
+        return a*(np.exp(x) - 1)
+
+def der_elu(x):
+    '''(float) -> float'''
+    a = 1
+    if x >= 0:
+        return 1
+    else:
+        return elu(x) + a
 
 # Função de ativação linear
 def idem(x):
@@ -63,14 +83,28 @@ def idem(x):
 def one(x):
     return 1
 
+# Função que retorna um gerador truncado da distribuição normal
+def get_normal_truncada(mean=0, sd=0.3, low=-1, up=1):
+    '''(float, float, float, float) -> Object
+    Recebe média, desvio-padrão, limite inferior e limite superior
+    para retornar um gerador de números aleatórios seguindo uma
+    distribuição normal truncada, com os limites setados pelos parâmetros.
+    Uso >> X = get_normal_truncada()
+        >> X.rvs(10)
+    Retorna 10 amostras para a variável aleatória definida com os
+    parâmetros-padrão acima informados.
+    '''
+    return truncnorm((low-mean)/sd, (up-mean)/sd, loc=mean, scale=sd)
 
-def normalizar(dados, tqdm):
+
+# normalização de vetores para o intervalo [0, 1]
+def normalizar(dados):
     '''(list(list)) -> None
     Faz a normalização dos dados, que ficarão de forma que
     o minimo = 0 e o maximo = 1.
     Antes disso removo os NAN do vetor
     '''
-    for col_num in tqdm(range(len(dados[0]))):
+    for col_num in range(len(dados[0])):
         for row_num in range(len(dados)):
             if np.isnan(dados[row_num][col_num]):
                 dados[row_num, col_num] = 0
@@ -84,4 +118,3 @@ def normalizar(dados, tqdm):
             amplitude = 1
         for row_num in range(len(dados)):
             dados[row_num, col_num] = (dados[row_num, col_num] - minimo) / amplitude
-
