@@ -1,25 +1,13 @@
 # -*- coding: utf-8 -*-
 # util.py
-# From Classic Computer Science Problems in Python Chapter 7
-# Copyright 2018 David Kopec
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
 """
 @author: Eduardo Galvani Massino
 Número USP: 9318532
 """
 import numpy as np
-from tqdm.notebook import tqdm
 from scipy.stats import truncnorm
 
-# função de ativação Smooth ReLU
-# a sua derivada é a função Sigmoid
-def s_relu(x):
-    '''(float) -> float'''
-    return np.log(1 + np.exp(x))
-
-# função sigmoid, usada para classificação e a camada de saída
+# função sigmoid, a ativação mais clássica
 def sigmoid(x):
     '''(float) -> float'''
     return 1.0 / (1.0 + np.exp(-x))
@@ -83,6 +71,13 @@ def idem(x):
 def one(x):
     return 1
 
+# função de ativação Smooth ReLU
+# a sua derivada é a função Sigmoid
+def s_relu(x):
+    '''(float) -> float'''
+    return np.log(1 + np.exp(x))
+
+
 # Função que retorna um gerador truncado da distribuição normal
 def get_normal_truncada(mean=0, sd=0.3, low=-1, up=1):
     '''(float, float, float, float) -> Object
@@ -97,6 +92,20 @@ def get_normal_truncada(mean=0, sd=0.3, low=-1, up=1):
     return truncnorm((low-mean)/sd, (up-mean)/sd, loc=mean, scale=sd)
 
 
+# Testa se o código está sendo executado no Jupyter ou não
+def is_notebook():
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False      # Probably standard Python interpreter
+
+
 # normalização de vetores para o intervalo [0, 1]
 def normalizar(dados):
     '''(list(list)) -> None
@@ -104,6 +113,11 @@ def normalizar(dados):
     o minimo = 0 e o maximo = 1.
     Antes disso removo os NAN do vetor
     '''
+    if is_notebook():
+        from tqdm.notebook import tqdm
+    else:
+        from tqdm import tqdm
+
     for col_num in range(len(dados[0])):
         for row_num in range(len(dados)):
             if np.isnan(dados[row_num][col_num]):

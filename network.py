@@ -9,7 +9,6 @@
 @author: Eduardo Galvani Massino
 Número USP: 9318532
 """
-#from functools import reduce
 from layer import Layer
 from math import sqrt
 import numpy as np
@@ -22,9 +21,6 @@ class Network:
         sendo 1 camada de entrada, 1 oculta e 1 de saída.
         A estrutura é uma lista de inteiros, contendo a
         qtde de neurônios de cada camada.
-        Por padrão estou usando a função de ativação Sigmóide,
-        mas as opções disponíveis para funcao_ativacao são:
-        "sigmoide" "s_relu".
         O parametro ativacoes recebe uma tupla com 4 Callables,
         que representam, em ordem, as funçoes de ativação e a sua derivada
         para a(s) camada(s) oculta(s), e as funçoes de ativação e 
@@ -32,50 +28,40 @@ class Network:
         '''
         l = len(layer_structure)
         if l < 3:
-            raise ValueError("Erro: deve haver ao menos 3 camadas!")
-
+            raise ValueError("Erro: são necessárias ao menos 3 camadas!")
         if ativacoes is None or len(ativacoes) != 4:
             raise ValueError("Erro: deve definir as funções de ativação!")
 
         self.layers = np.array([], dtype=np.float64)
-        self.previsoes = np.array([], dtype=np.float64)
         self.estrutura = layer_structure
 
-        # camada de entrada
+        # camada de entrada =>
         # não há camada anterior e nem função de ativação
-        input_layer = Layer(None, layer_structure[0], taxa)
+        input_layer = Layer(None, self.estrutura[0], taxa)
         self.layers = np.append(self.layers, input_layer)
-        #self.layers.append(input_layer)
 
         # camadas oculta(s)
-        for previous, qtd_neurons in np.ndenumerate(layer_structure[1::l]):
+        for previous, qtd_neurons in np.ndenumerate(self.estrutura[1::l]):
             next_layer = Layer(self.layers[previous[0]], qtd_neurons, taxa,
                                ativacoes[0], ativacoes[1])
             self.layers = np.append(self.layers, next_layer)
-            #self.layers.append(next_layer)
 
         # camada de saída
-        output_layer = Layer(self.layers[-1], layer_structure[-1], taxa,
+        output_layer = Layer(self.layers[-1], self.estrutura[-1], taxa,
                                ativacoes[2], ativacoes[3])
         self.layers = np.append(self.layers, output_layer)
-        #self.layers.append(output_layer)
 
 
-    def outputs(self, entrada):
+    def feedforward(self, entrada):
         '''(list[float]) -> list[float]
         Fornece dados de entrada para a primeira camada, em seguida, a saída
         da primeira é fornecida como entrada para a segunda, a saída da segunda
-        para a terceira, e assim por diante.
-        E no fim retorna as saidas da camada de saída.
+        para a terceira, e assim por diante. Ao final, retorna as saidas da camada de saída.
         '''
         saida = self.layers[0].outputs(entrada)
-        #print(entrada)
-        #print(0, saida)
         for i in range(1, len(self.layers)):
             saida = self.layers[i].outputs(saida)
-        #print(i, saida)
         return saida
-        #return reduce(lambda inputs, layer: layer.outputs(inputs), self.layers, entrada)
 
 
     def backpropagate(self, saidas_reais):
@@ -86,7 +72,8 @@ class Network:
         # calcula delta para os neurônios da camada de saída
         last_layer = len(self.layers) - 1
         self.layers[last_layer].calcular_delta_camada_de_saida(saidas_reais)
-        # calcula delta para as camadas ocultas na ordem inversa
+        
+        # calcula delta para as camadas ocultas, da saída para o início da rede
         for l in range(last_layer - 1, 0, -1):
             self.layers[l].calcular_delta_camada_oculta(self.layers[l + 1])
 
@@ -118,7 +105,7 @@ class Network:
         '''
         for i, xs in enumerate(entradas):
             ys = saidas_reais[i]
-            _ = self.outputs(xs)
+            _ = self.feedforward(xs)
             self.backpropagate(ys)
             self.update_weights()
             self.update_bias()
@@ -131,10 +118,10 @@ class Network:
         for j, xs in enumerate(entradas):
             l2 = 0
             ys = saidas_reais[j]
-            saidas = self.outputs(xs)
+            saidas = self.feedforward(xs)
             for i in range(len(ys)):
                 l2 += (ys[i] - saidas[i])**2
-            erro = np.append(erro, sqrt(l2)) #/ len(ys))
+            erro = np.append(erro, sqrt(l2))
         return np.mean(erro)
 
     def predict(self, entradas, interpretar):
@@ -143,22 +130,19 @@ class Network:
         '''
         self.previsoes = np.array([], dtype=np.float64)
         for entrada in entradas:
-            self.previsoes = np.append(self.previsoes, interpretar(self.outputs(entrada)))
-            #self.previsoes.append(interpretar(self.outputs(entrada)))
+            self.previsoes = np.append(self.previsoes, interpretar(self.feedforward(entrada)))
         return self.previsoes.reshape(-1, 1)
 
     def validate(self, esperados):
         '''(list[list[floats]], list[list[floats]], Callable) -> float
-        Função para validar os exemplos do livro,
-        mostrando a matriz de confusão ao final.
-        DEVE ser chamado após a função predict
-        Retorna a acuracia
+        Função que calcula a acurácia da rede para previsões já feitas.
+        DEVE ser chamado após a função predict.
         '''
-        if len(self.previsoes) == 0:
+        if self.previsoes is None or len(self.previsoes) == 0:
             raise ValueError("Erro: não há previsões! "+
                              "O método predict deve ser chamado antes!")
         corretos = 0
-        for y_pred, esperado in zip(self.previsoes.reshape(-1, 1), esperados):
+        for y_pred, esperado in zip(self.previsoes, esperados):
             if y_pred == esperado:
                 corretos += 1
         acuracia = corretos / len(self.previsoes)
