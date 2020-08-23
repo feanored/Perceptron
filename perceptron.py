@@ -34,7 +34,7 @@ class Perceptron():
             self.der_ativacao = one
         elif ativacao == "sigm":
             self.ativacao = sigmoid
-            self.der_ativacao = derivative_sigmoid
+            self.der_ativacao = der_sigmoid
         elif ativacao == "s_relu":
             self.ativacao = s_relu
             self.der_ativacao = sigmoid
@@ -97,6 +97,8 @@ class Perceptron():
         # onehotencoder extrai as classes únicas já ordenadas alfabeticamente
         y_encoded = self._enc.fit_transform(y_train)
         classes = self._enc.categories_[0]
+        if self.__DEBUG == 1:
+            print("Classes: ", classes)
 
         if self.classes is None:
             self.classes = classes
@@ -149,7 +151,7 @@ class Perceptron():
             self.network.train(x_train, y_encoded)
         
         # exibe valores de erro e de acurácia
-        if self.__DEBUG == 1:
+        if self.__DEBUG == 2:
             _ = self.network.predict(x_train, self.reinterpretar_saidas)
             acuracia = self.network.validate(y_train)
             mse_error = self.network.mse(x_train, y_encoded)
