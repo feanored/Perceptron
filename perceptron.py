@@ -102,9 +102,6 @@ class Perceptron():
 
         if self.classes is None:
             self.classes = classes
-        elif self.classes.all() != classes.all():
-            raise ValueError("A lista de valores para o treino contém classes "+
-                             "diferentes do que as usadas no treino anterior!")
 
         if self.__DEBUG == 2:
             print(self._enc.categories)
@@ -128,6 +125,8 @@ class Perceptron():
             for hidden in self.N:
                 rede.append(hidden)
             rede.append(neurons_out)
+            if self.__DEBUG == 1:
+                print("Estrutura: ", rede)
             
             ativacoes = (self.ativacao, self.der_ativacao, 
                          self.ativacao_saida, self.der_ativacao_saida)

@@ -11,9 +11,10 @@ Número USP: 9318532
 """
 import csv
 import random as rd
+import numpy as np
 from tqdm import tqdm
 from util import normalizar
-from network import Network
+from perceptron import Perceptron
 from scores import Scores
 
 #rd.seed(123)
@@ -28,50 +29,44 @@ def iris_interpret_output(output):
 
 def main():
     iris_parameters = []
-    iris_classifications = []
     iris_species = []
 
-    with open('iris.csv', mode='r') as iris_file:
+    with open('datasets/iris.csv', mode='r') as iris_file:
         irises = list(csv.reader(iris_file))
         rd.shuffle(irises) # get our lines of data in random order
         for iris in irises:
             parameters = [float(n) for n in iris[0:4]]
             iris_parameters.append(parameters)
             species = iris[4]
-            if species == "Iris-setosa":
-                iris_classifications.append([1.0, 0.0, 0.0])
-            elif species == "Iris-versicolor":
-                iris_classifications.append([0.0, 1.0, 0.0])
-            else:
-                iris_classifications.append([0.0, 0.0, 1.0])
             iris_species.append(species)
+    
+    iris_parameters = np.array(iris_parameters)
     normalizar(iris_parameters)
+    iris_species = np.array(iris_species).reshape(-1, 1)
 
-    print("Treinando...")
+    print("\nTreinando...\n")
 
-    iris_network = Network([4, 6, 3], 0.2)
+    iris_network = Perceptron(taxa=0.2, ativacao="l_relu", N=[4], debug=1)
 
     # número de dados de treino
     n_train = 120
-    # quantidade de treinamentos (padrao=50)
-    M = 500
 
     # train over the first 140 irises in the data set 50 times
-    iris_trainers = iris_parameters[:n_train]
-    iris_trainers_corrects = iris_classifications[:n_train]
-    for _ in tqdm(range(M)):
-        iris_network.train(iris_trainers, iris_trainers_corrects)
+    x_train = iris_parameters[:n_train]
+    y_train = iris_species[:n_train]
+    
+    iris_network.treinar(x_train, y_train, M=100)
+    y_train_pred = iris_network.prever(x_train)
+    scores = Scores(y_train, y_train_pred)
+    scores.exibir_grafico()
 
     # test over the last 10 of the irises in the data set
-    iris_testers = iris_parameters[n_train:]
-    iris_testers_corrects = iris_species[n_train:]
-
-    y_pred = iris_network.predict(iris_testers, iris_interpret_output)
-    results = iris_network.validate(iris_testers_corrects)
-    print(f"%d corretos de %d = %.1f%%"%(results[0], len(iris_testers), results[1]*100))
+    x_test = iris_parameters[n_train:]
+    y_test = iris_species[n_train:]
+    y_test_pred = iris_network.prever(x_test)
 
     # minha classe geradora da matriz de confusão
-    scores = Scores(iris_testers_corrects, y_pred)
+    scores = Scores(y_test, y_test_pred)
     scores.exibir_grafico()
 
 if __name__ == "__main__":
