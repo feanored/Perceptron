@@ -125,7 +125,7 @@ class Network:
         return np.mean(erro)
 
     def predict(self, entradas, interpretar):
-        '''(list[list[floats]], list[list[floats]], Callable) -> None
+        '''(list[list[floats]], Callable) -> list[list[floats]]
         Faz a previsão dos valores da Rede
         '''
         self.previsoes = np.array([], dtype=np.float64)

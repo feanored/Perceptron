@@ -12,7 +12,7 @@ from network import Network
 from sklearn.preprocessing import OneHotEncoder
 
 class Perceptron():
-    def __init__(self, N=[1], M=50, ativacao="sigm", taxa=0.1, debug=0):
+    def __init__(self, N=[1], M=50, ativacao="l_relu", taxa=0.001, debug=0):
         '''(None, str, list[int], int, float, float, str, float) -> None
         Construtor da minha classe Perceptron
         Parâmetros da classe:
@@ -23,7 +23,7 @@ class Perceptron():
                 de "épocas" da rede, o valor padrão é 50;
             *ativacao: escolha de uma das funções de ativação disponíveis
                 para a(s) camada(s) oculta(s).
-            *taxa: taxa de aprendizagem, padrão de 0.1
+            *taxa: taxa de aprendizagem, padrão de 0.001
             *debug: flag para exibição de parâmetros durante o treinamento
         '''
         self.__DEBUG = debug
@@ -190,7 +190,7 @@ class Perceptron():
         return self.network.predict(X, interpretar)
     
     def processar(self, X):
-        '''
+        '''(np.array) -> np.array
         Processa o vetor de entradas X e retorna a saída sem interpretação
         '''
         if self.network is None:
@@ -206,7 +206,7 @@ class Perceptron():
         return np.array(saidas)
 
     def funcao_erro(self, X, Y):
-        '''(np.array, np.array, str) -> float
+        '''(np.array, np.array) -> float
         Calcula o erro MSE a partir de saidas obtidas e saidas esperadas
         de acordo com o estado atual da rede, que deve estar treinada
         Por padrão retorna o erro de Norma 2, o MSE, que está
