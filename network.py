@@ -121,7 +121,7 @@ class Network:
             saidas = self.feedforward(xs)
             for i in range(len(ys)):
                 l2 += (ys[i] - saidas[i])**2
-            erro = np.append(erro, sqrt(l2))
+            erro = np.append(erro, l2)
         return np.mean(erro)
 
     def predict(self, entradas, interpretar):
