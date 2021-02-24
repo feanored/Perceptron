@@ -70,8 +70,7 @@ model.evaluate(x_test, y_test, verbose=2)
 y_train_pred = np.argmax(model.predict(x_train), axis=-1)
 y_test_pred = np.argmax(model.predict(x_test), axis=-1)
 
-# usando a minha propria classe de validação
-# e que mostra a acuracia e a matriz de confusão
+# usando a minha classe de validação que mostra a matriz de confusão
 score_train = Scores(y_train, y_train_pred)
 score_train.exibir_grafico("Dados de treino")
 
